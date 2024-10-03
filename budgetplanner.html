@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Management App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: pink;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #4A4A4A;
+        }
+        form {
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        label, input[type="email"], input[type="password"], input[type="number"], input[type="text"], textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            width: auto;
+            padding: 10px 20px;
+            display: inline-block;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #alerts {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        #chatbot-button, #close-chatbot-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            display: none; /* Initially hide chatbot buttons */
+        }
+        #chatbot-button:hover, #close-chatbot-button:hover {
+            background-color: #0056b3;
+        }
+        #chatbot-iframe {
+            display: none;
+            width: 400px;
+            height: 600px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Budget Management App</h1>
+
+<!-- Login Form -->
+<div id="login-section">
+    <h2>Login to Budget Management App</h2>
+    <div id="login-alerts"></div>
+
+    <form id="login-form">
+        <label for="email">Enter Email:</label>
+        <input type="email" id="email" placeholder="Email" required>
+        <label for="password">Enter Password:</label>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="button" onclick="validateLogin()">Login</button>
+    </form>
+</div>
+
+<!-- Main Budget Management Section (Hidden by Default) -->
+<div id="main-app" style="display: none;">
+    <div id="alerts"></div>
+
+    <form id="budget-setup-form">
+        <label for="balance">Enter Current Balance:</label>
+        <input type="number" id="balance" placeholder="Current Balance" required>
+        <label for="spend-limit">Enter Spend Limit:</label>
+        <input type="number" id="spend-limit" placeholder="Spend Limit" required>
+        <button type="button" onclick="addBudget()">Add Budget</button>
+    </form>
+
+    <form id="category-form" style="display: none;">
+        <label for="category">Enter Category:</label>
+        <input type="text" id="category" placeholder="Category" required>
+        <label for="category-amount">Amount Spent:</label>
+        <input type="number" id="category-amount" placeholder="Amount" required>
+        <button type="button" onclick="updateCategory()">Add Category</button>
+    </form>
+
+    <form id="savings-form" style="display: none;">
+        <label for="savings-amount">Enter Savings Goal:</label>
+        <input type="number" id="savings-amount" placeholder="Savings Goal" required>
+        <button type="button" onclick="setSavingsGoal()">Set Savings Goal</button>
+    </form>
+
+    <div id="savings-message"></div>
+    <div id="budget-summary"></div>
+    <button id="reset-button" style="display: none;" onclick="resetApp()">Reset</button>
+
+    <!-- Chatbot Button -->
+    <button id="chatbot-button" onclick="openChatbot()">Chat with BudgetMate</button>
+    <button id="close-chatbot-button" onclick="closeChatbot()">Close Chatbot</button>
+
+    <!-- Landbot Chatbot Embed -->
+    <iframe id="chatbot-iframe" src="https://landbot.online/v3/H-2626468-P758G4923OEMVL56/index.html"></iframe>
+</div>
+
+<script>
+// Login Section
+const validEmails = ["abcd@gmail.com", "1234@gmail.com"];
+const validPassword = "1234";
+
+function validateLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const loginAlertsDiv = document.getElementById('login-alerts');
+
+    if (validEmails.includes(email) && password === validPassword) {
+        loginAlertsDiv.innerHTML = "<p style='color:green;'>Login successful! Redirecting...</p>";
+        setTimeout(() => {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+        }, 1000);
+    } else {
+        loginAlertsDiv.innerHTML = "<p style='color:red;'>Invalid email or password! Please try again.</p>";
+    }
+}
+
+// Main App Functionality
+let currentBalance = 0;
+let spendLimit = 0;
+let totalSpent = 0;
+let categories = [];
+let savingsGoal = 0;
+
+function addBudget() {
+    currentBalance = parseInt(document.getElementById('balance').value);
+    spendLimit = parseInt(document.getElementById('spend-limit').value);
+
+    if (currentBalance && spendLimit) {
+        if (currentBalance < spendLimit) {
+            displayAlert("Error: Spend limit is greater than current balance.", "red");
+            return;
+        }
+        document.getElementById('budget-setup-form').style.display = 'none';
+        document.getElementById('category-form').style.display = 'block';
+        document.getElementById('savings-form').style.display = 'block';
+        document.getElementById('reset-button').style.display = 'block';
+        document.getElementById('chatbot-button').style.display = 'block'; // Show chatbot button on second page
+        displayBudget();
+    } else {
+        displayAlert("Please enter valid values for balance and spend limit.", "red");
+    }
+}
+
+function updateCategory() {
+    const category = document.getElementById('category').value;
+    const categoryAmount = parseInt(document.getElementById('category-amount').value);
+
+    if (category && categoryAmount) {
+        if (currentBalance < categoryAmount) {
+            displayAlert("Error: Amount spent cannot exceed current balance.", "red");
+            return;
+        }
+        categories.push({ name: category, amount: categoryAmount });
+        totalSpent += categoryAmount;
+        currentBalance -= categoryAmount;
+
+        if (totalSpent >= spendLimit) {
+            displayAlert("You have exceeded your spend limit!", "red");
+        } else if (totalSpent >= spendLimit * 0.8) {
+            displayAlert("You are nearing your spend limit.", "gold");
+        }
+
+        if (currentBalance < 0) {
+            currentBalance = 0;
+            displayAlert("Current balance cannot go below zero.", "red");
+        }
+
+        document.getElementById('category').value = '';
+        document.getElementById('category-amount').value = '';
+        displayBudget();
+    } else {
+        displayAlert("Please enter valid category and amount.", "red");
+    }
+}
+
+function setSavingsGoal() {
+    savingsGoal = parseInt(document.getElementById('savings-amount').value);
+    const savingsMessageDiv = document.getElementById('savings-message');
+
+    if (savingsGoal) {
+        if (savingsGoal === currentBalance) {
+            savingsMessageDiv.innerHTML = "<p style='color:green;'>You can comfortably save $" + savingsGoal + ".</p>";
+        } else if (savingsGoal < currentBalance) {
+            const difference = currentBalance - savingsGoal;
+            savingsMessageDiv.innerHTML = "<p style='color:green;'>You have $" + difference + " remaining after setting your savings goal. You can save additionally.</p>";
+        } else if (savingsGoal > currentBalance) {
+            const deficit = savingsGoal - currentBalance;
+            savingsMessageDiv.innerHTML = "<p style='color:red;'>You are short by $" + deficit + " to achieve your savings goal. Consider reducing your expenses or adjusting your savings goal.</p>";
+        }
+    } else {
+        savingsMessageDiv.innerHTML = "<p style='color:red;'>Please enter a valid savings goal.</p>";
+    }
+    displayBudget();
+}
+
+function displayBudget() {
+    const summaryDiv = document.getElementById('budget-summary');
+    summaryDiv.innerHTML = 
+        "<h2>Budget Summary</h2>" +
+        "<p>Current Balance: $" + currentBalance + "</p>" +
+        "<p>Spend Limit: $" + spendLimit + "</p>" +
+        "<p>Total Money Spent: $" + totalSpent + "</p>" +
+        "<p>Categories: " + categories.map(c => c.name + ": $" + c.amount).join(', ') + "</p>" +
+        "<p>Savings Goal: $" + savingsGoal + "</p>";
+}
+
+function displayAlert(message, color) {
+    const alertsDiv = document.getElementById('alerts');
+    alertsDiv.innerHTML = "<p style='color:" + color + ";'>" + message + "</p>";
+}
+
+function resetApp() {
+    currentBalance = 0;
+    spendLimit = 0;
+    totalSpent = 0;
+    categories = [];
+    savingsGoal = 0;
+
+    document.getElementById('budget-setup-form').reset();
+    document.getElementById('category-form').reset();
+    document.getElementById('savings-form').reset();
+    document.getElementById('alerts').innerHTML = '';
+    document.getElementById('budget-summary').innerHTML = '';
+    document.getElementById('savings-message').innerHTML = '';
+    document.getElementById('category-form').style.display = 'none';
+    document.getElementById('savings-form').style.display = 'none';
+    document.getElementById('reset-button').style.display = 'none';
+    document.getElementById('chatbot-button').style.display = 'none'; // Hide chatbot button on reset
+    document.getElementById('budget-setup-form').style.display = 'block';
+    displayAlert("Application has been reset.", "green");
+}
+
+function openChatbot() {
+    document.getElementById('chatbot-iframe').style.display = 'block';
+    document.getElementById('close-chatbot-button').style.display = 'block'; // Show close button
+    document.getElementById('chatbot-button').style.display = 'none'; // Hide the open button
+}
+
+function closeChatbot() {
+    document.getElementById('chatbot-iframe').style.display = 'none';
+    document.getElementById('close-chatbot-button').style.display = 'none'; // Hide close button
+    document.getElementById('chatbot-button').style.display = 'block'; // Show the open button again
+}
+</script>
+
+</body>
+</html>
